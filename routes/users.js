@@ -8,9 +8,29 @@ var router = express.Router();
 router.use(bodyParser.json());
 
 /* GET users listing. */
-router.get("/", (req, res, next) => {
-  res.send("respond with a resource");
-});
+router.get(
+  "/",
+  authenticate.verifyUser,
+  authenticate.verifyAdmin,
+  (req, res, next) => {
+    User.find({})
+      .then(
+        user => {
+          if (user != null) {
+            res.statusCode = 200;
+            res.setHeader("Content-Type", "application/json");
+            res.json(user);
+          } else {
+            err = new Error("No users have been found.");
+            err.status = 404;
+            return next(err);
+          }
+        },
+        err => next(err)
+      )
+      .catch(err => next(err));
+  }
+);
 
 router.post("/signup", (req, res, next) => {
   User.register(
@@ -57,7 +77,7 @@ router.post("/login", passport.authenticate("local"), (req, res) => {
   });
 });
 
-router.get("/logout", (req, res) => {
+router.get("/logout", (req, res, next) => {
   if (req.session) {
     req.session.destroy();
     res.clearCookie("session-id");
